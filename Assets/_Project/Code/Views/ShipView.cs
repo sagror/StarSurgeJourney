@@ -1,12 +1,12 @@
+using UnityEngine;
 using StarSurgeJourney.Core.MVC;
 using StarSurgeJourney.Models;
-using UnityEngine;
 
 namespace StarSurgeJourney.Views
 {
     public class ShipView : BaseView
     {
-        //[SerializeField] private GameObject shipModel;
+        [SerializeField] private SpriteRenderer shipSprite;
         [SerializeField] private ParticleSystem engineEffect;
         [SerializeField] private ParticleSystem damageEffect;
         [SerializeField] private ParticleSystem shieldEffect;
@@ -23,6 +23,9 @@ namespace StarSurgeJourney.Views
         private void Awake()
         {
             animator = GetComponent<Animator>();
+            
+            if (shipSprite == null)
+                shipSprite = GetComponent<SpriteRenderer>();
         }
         
         public override void Initialize(BaseModel model)
@@ -32,6 +35,7 @@ namespace StarSurgeJourney.Views
             
             if (shipModel != null)
             {
+                // Subscribe to events
                 shipModel.OnPositionChanged += UpdatePosition;
                 shipModel.OnRotationChanged += UpdateRotation;
                 shipModel.OnFire += PlayFireEffect;
@@ -42,13 +46,15 @@ namespace StarSurgeJourney.Views
         
         public override void UpdateView()
         {
-           
+            // This method is called when the model changes
+            // We already have specific events, but could do additional updates here
         }
         
-        private void UpdatePosition(Vector3 position)
+        private void UpdatePosition(Vector2 position)
         {
-            transform.position = position;
+            transform.position = new Vector3(position.x, position.y, 0);
             
+            // Update engine effect based on velocity
             if (engineEffect != null)
             {
                 var emission = engineEffect.emission;
@@ -66,9 +72,9 @@ namespace StarSurgeJourney.Views
             }
         }
         
-        private void UpdateRotation(Quaternion rotation)
+        private void UpdateRotation(float rotation)
         {
-            transform.rotation = rotation;
+            transform.rotation = Quaternion.Euler(0, 0, rotation);
         }
         
         private void PlayFireEffect()
@@ -78,12 +84,16 @@ namespace StarSurgeJourney.Views
                 fireAudio.pitch = Random.Range(0.9f, 1.1f);
                 fireAudio.Play();
             }
+            
+            // Here you would add logic to show firing effect
+            // Usually this would involve instantiating a projectile
         }
         
         private void UpdateHealthEffect(float health)
         {
             float healthRatio = health / shipModel.GetStats().maxHealth;
             
+            // Show damage effects if health is low
             if (healthRatio < 0.3f && damageEffect != null)
             {
                 if (!damageEffect.isPlaying)
@@ -96,6 +106,7 @@ namespace StarSurgeJourney.Views
                 damageEffect.Stop();
             }
             
+            // Activate/deactivate shield effect
             if (shipModel.GetStats().shield > 0 && shieldEffect != null)
             {
                 if (!shieldEffect.isPlaying)
@@ -111,22 +122,26 @@ namespace StarSurgeJourney.Views
         
         private void PlayDestroyedEffect()
         {
+            // Here you would add logic to show ship explosion
             if (damageAudio != null)
             {
                 damageAudio.Play();
             }
             
-            if (shipModel != null)
+            // Deactivate ship sprite
+            if (shipSprite != null)
             {
-                shipModel.gameObject.SetActive(false);
+                shipSprite.enabled = false;
             }
             
+            // You could instantiate an explosion prefab here
         }
         
         protected override void OnDestroy()
         {
             base.OnDestroy();
             
+            // Unsubscribe from events
             if (shipModel != null)
             {
                 shipModel.OnPositionChanged -= UpdatePosition;

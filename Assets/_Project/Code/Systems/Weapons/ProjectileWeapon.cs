@@ -12,25 +12,32 @@ namespace StarSurgeJourney.Systems.Weapons
         {
             for (int i = 0; i < projectilesPerShot; i++)
             {
-                Vector3 direction = firePoint.forward;
+                // En 2D, usamos firePoint.up en lugar de firePoint.forward
+                Vector2 direction = firePoint.up;
+                
                 if (spreadAngle > 0 && projectilesPerShot > 1)
                 {
+                    // Para 2D, rotamos alrededor del eje Z
                     float angle = Random.Range(-spreadAngle, spreadAngle);
-                    direction = Quaternion.Euler(0, angle, 0) * direction;
+                    direction = (Vector2)(Quaternion.Euler(0, 0, angle) * direction);
                 }
                 
                 if (projectilePrefab != null)
                 {
-                    GameObject projectileObj = Instantiate(projectilePrefab, firePoint.position, Quaternion.LookRotation(direction));
+                    // Para 2D, usamos Quaternion.Euler para rotar alrededor del eje Z
+                    Quaternion rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90);
+                    GameObject projectileObj = Instantiate(projectilePrefab, firePoint.position, rotation);
                     Projectile projectile = projectileObj.GetComponent<Projectile>();
                     
                     if (projectile != null)
                     {
-                        projectile.Initialize(Damage, Range, direction * projectileSpeed);
+                        // La dirección que pasamos es un Vector2, compatible con Initialize
+                        projectile.Initialize(Damage, direction, projectileSpeed);
                     }
                     else
                     {
-                        Rigidbody rb = projectileObj.GetComponent<Rigidbody>();
+                        // Si el proyectil no tiene el componente Projectile, intentamos usar Rigidbody2D
+                        Rigidbody2D rb = projectileObj.GetComponent<Rigidbody2D>();
                         if (rb != null)
                         {
                             rb.velocity = direction * projectileSpeed;

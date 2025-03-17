@@ -2,77 +2,45 @@ using UnityEngine;
 
 namespace StarSurgeJourney.Systems.Weapons
 {
-    public interface IDamageable
-    {
-        void TakeDamage(float amount);
-    }
-    
-    [RequireComponent(typeof(Rigidbody))]
-    [RequireComponent(typeof(Collider))]
+    [RequireComponent(typeof(Rigidbody2D))]
+    [RequireComponent(typeof(Collider2D))]
     public class Projectile : MonoBehaviour
     {
         [SerializeField] private float damage = 10f;
-        [SerializeField] private float lifetime = 5f;
-        [SerializeField] private ParticleSystem hitEffect;
-        [SerializeField] private AudioClip hitSound;
+        [SerializeField] private float lifetime = 3f;
         [SerializeField] private bool destroyOnHit = true;
+        [SerializeField] private GameObject hitEffectPrefab;
         
-        private Rigidbody rb;
-        private bool isInitialized = false;
+        private Rigidbody2D rb;
         
         private void Awake()
         {
-            rb = GetComponent<Rigidbody>();
-            
-            Collider col = GetComponent<Collider>();
-            if (col != null)
-            {
-                col.isTrigger = true;
-            }
+            rb = GetComponent<Rigidbody2D>();
+            Destroy(gameObject, lifetime); // Auto-destroy after lifetime
         }
         
-        private void Start()
+        public void Initialize(float damageAmount, Vector2 direction, float speed)
         {
-            if (!isInitialized)
-            {
-                Destroy(gameObject, lifetime);
-            }
+            damage = damageAmount;
+            rb.velocity = direction * speed;
         }
         
-        public void Initialize(float damage, float range, Vector3 velocity)
+        private void OnTriggerEnter2D(Collider2D other)
         {
-            this.damage = damage;
-            this.lifetime = range / velocity.magnitude;
-            
-            if (rb != null)
-            {
-                rb.velocity = velocity;
-            }
-            
-            isInitialized = true;
-            Destroy(gameObject, lifetime);
-        }
-        
-        private void OnTriggerEnter(Collider other)
-        {
+            // Check if the other object can be damaged
             IDamageable damageable = other.GetComponent<IDamageable>();
             if (damageable != null)
             {
                 damageable.TakeDamage(damage);
             }
             
-            if (hitEffect != null)
+            // Play hit effect if available
+            if (hitEffectPrefab != null)
             {
-                ParticleSystem effect = Instantiate(hitEffect, transform.position, Quaternion.identity);
-                effect.Play();
-                Destroy(effect.gameObject, effect.main.duration);
+                Instantiate(hitEffectPrefab, transform.position, Quaternion.identity);
             }
             
-            if (hitSound != null)
-            {
-                AudioSource.PlayClipAtPoint(hitSound, transform.position);
-            }
-            
+            // Destroy this projectile if configured to do so
             if (destroyOnHit)
             {
                 Destroy(gameObject);

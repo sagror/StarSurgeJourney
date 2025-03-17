@@ -20,7 +20,7 @@ namespace StarSurgeJourney.Systems.AI
         [SerializeField] private float minSpawnInterval = 5f;
         [SerializeField] private float maxSpawnInterval = 15f;
         [SerializeField] private int maxEnemiesAlive = 10;
-        [SerializeField] private float spawnDistance = 200f;
+        [SerializeField] private float spawnDistance = 10f;
         [SerializeField] private bool spawnOnStart = true;
         
         [Header("Enemies Prefabs")]
@@ -44,7 +44,6 @@ namespace StarSurgeJourney.Systems.AI
         
         private void Start()
         {
-            // Busca al jugador
             GameObject player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)
             {
@@ -101,7 +100,7 @@ namespace StarSurgeJourney.Systems.AI
                 
             EnemyType enemyType = DetermineEnemyType();
             
-            Vector3 spawnPosition = CalculateSpawnPosition();
+            Vector2 spawnPosition = CalculateSpawnPosition();
             
             GameObject enemyPrefab = GetEnemyPrefab(enemyType);
             if (enemyPrefab != null)
@@ -109,20 +108,19 @@ namespace StarSurgeJourney.Systems.AI
                 GameObject enemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
                 activeEnemies.Add(enemy);
                 
-                AIController aiController = enemy.GetComponent<AIController>();
-                if (aiController != null)
+                EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
+                if (enemyAI != null)
                 {
-                    aiController.SetTarget(playerTransform);
+                    
                 }
             }
         }
         
-        private Vector3 CalculateSpawnPosition()
+        private Vector2 CalculateSpawnPosition()
         {
             Vector2 randomCircle = Random.insideUnitCircle.normalized * spawnDistance;
-            Vector3 offset = new Vector3(randomCircle.x, 0, randomCircle.y);
             
-            return playerTransform.position + offset;
+            return (Vector2)playerTransform.position + randomCircle;
         }
         
         private EnemyType DetermineEnemyType()
@@ -168,15 +166,14 @@ namespace StarSurgeJourney.Systems.AI
             }
         }
         
-        public GameObject SpawnBoss(Vector3 position)
+        public GameObject SpawnBoss(Vector2 position)
         {
             if (bossPrefab != null)
             {
                 GameObject boss = Instantiate(bossPrefab, position, Quaternion.identity);
                 activeEnemies.Add(boss);
                 
-                // Configuración especial para el jefe
-                // ...
+                //Boss Config TODO
                 
                 return boss;
             }
@@ -184,7 +181,7 @@ namespace StarSurgeJourney.Systems.AI
             return null;
         }
         
-        public void SpawnWave(int numFighters, int numBombers, int numScouts, Vector3 centerPosition, float radius)
+        public void SpawnWave(int numFighters, int numBombers, int numScouts, Vector2 centerPosition, float radius)
         {
             for (int i = 0; i < numFighters; i++)
             {
@@ -202,13 +199,13 @@ namespace StarSurgeJourney.Systems.AI
             }
         }
         
-        private Vector3 CalculatePositionInRadius(Vector3 center, float radius)
+        private Vector2 CalculatePositionInRadius(Vector2 center, float radius)
         {
             Vector2 randomCircle = Random.insideUnitCircle * radius;
-            return center + new Vector3(randomCircle.x, 0, randomCircle.y);
+            return center + randomCircle;
         }
         
-        private GameObject SpawnSpecificEnemy(EnemyType type, Vector3 position)
+        private GameObject SpawnSpecificEnemy(EnemyType type, Vector2 position)
         {
             GameObject enemyPrefab = GetEnemyPrefab(type);
             if (enemyPrefab != null)
@@ -216,16 +213,22 @@ namespace StarSurgeJourney.Systems.AI
                 GameObject enemy = Instantiate(enemyPrefab, position, Quaternion.identity);
                 activeEnemies.Add(enemy);
                 
-                AIController aiController = enemy.GetComponent<AIController>();
-                if (aiController != null && playerTransform != null)
+                EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
+                if (enemyAI != null && playerTransform != null)
                 {
-                    aiController.SetTarget(playerTransform);
+                    //TODO
                 }
                 
                 return enemy;
             }
             
             return null;
+        }
+        
+        private void OnDrawGizmosSelected()
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(transform.position, spawnDistance);
         }
     }
 }

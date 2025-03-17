@@ -1,7 +1,8 @@
-using StarSurgeJourney.Core.MVC;
+using UnityEngine;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
+using StarSurgeJourney.Core.MVC;
+using StarSurgeJourney.Systems.Weapons;
 
 namespace StarSurgeJourney.Models
 {
@@ -23,18 +24,18 @@ namespace StarSurgeJourney.Models
         }
     }
     
-    public class ShipModel : BaseModel
+    public class ShipModel : BaseModel, IDamageable
     {
         [SerializeField] private ShipStats stats = new ShipStats();
         
-        // Current Position
-        private Vector3 position;
+        // Current position
+        private Vector2 position;
         
-        // Current Rotation
-        private Quaternion rotation;
+        // Current rotation (2D uses a single angle)
+        private float rotation;
         
-        // Current Velocity
-        private Vector3 velocity;
+        // Current velocity
+        private Vector2 velocity;
         
         // Firing state
         private bool isFiring = false;
@@ -42,8 +43,8 @@ namespace StarSurgeJourney.Models
         
         // Events
         public event Action<float> OnHealthChanged;
-        public event Action<Vector3> OnPositionChanged;
-        public event Action<Quaternion> OnRotationChanged;
+        public event Action<Vector2> OnPositionChanged;
+        public event Action<float> OnRotationChanged;
         public event Action OnFire;
         public event Action OnDestroyed;
         
@@ -51,30 +52,42 @@ namespace StarSurgeJourney.Models
         {
             stats.Initialize();
             position = transform.position;
-            rotation = transform.rotation;
-            velocity = Vector3.zero;
+            rotation = transform.eulerAngles.z;
+            velocity = Vector2.zero;
         }
         
-        // Public Methods for controllers
+        // Public methods for controllers
         
-        public void Move(Vector3 direction, float deltaTime)
+        public void Move(Vector2 direction, float deltaTime)
         {
+            // Calculate new velocity
             velocity = direction * stats.speed;
             
+            // Update position
             position += velocity * deltaTime;
             
+            // Apply position to transform (AÑADIR ESTA LÍNEA)
+            transform.position = new Vector3(position.x, position.y, transform.position.z);
+            
+            // Notify observers
             OnPositionChanged?.Invoke(position);
             
+            // Notify views
             NotifyViews();
         }
-        
+
         public void Rotate(float amount, float deltaTime)
         {
-            Quaternion deltaRotation = Quaternion.Euler(0f, amount * stats.rotationSpeed * deltaTime, 0f);
-            rotation *= deltaRotation;
+            // Calculate new rotation (2D only needs z-axis rotation)
+            rotation += amount * stats.rotationSpeed * deltaTime;
             
+            // Apply rotation to transform (AÑADIR ESTA LÍNEA)
+            transform.rotation = Quaternion.Euler(0, 0, rotation);
+            
+            // Notify observers
             OnRotationChanged?.Invoke(rotation);
             
+            // Notify views
             NotifyViews();
         }
         
@@ -86,44 +99,53 @@ namespace StarSurgeJourney.Models
             isFiring = true;
             lastFireTime = Time.time;
             
+            // Notify observers
             OnFire?.Invoke();
             
+            // Notify views
             NotifyViews();
             
+            // Reset after firing
             isFiring = false;
         }
         
         public void TakeDamage(float amount)
         {
-            float damageAfterShield = Mathf.Max(0, amount - stats.shield);
-            stats.currentHealth -= damageAfterShield;
+            // Apply damage
+            stats.currentHealth -= amount;
             
+            // Notify
             OnHealthChanged?.Invoke(stats.currentHealth);
             
+            // Check for destruction
             if (stats.currentHealth <= 0)
             {
+                // Trigger destroyed event
                 OnDestroyed?.Invoke();
+                
+                // You might want to play an explosion effect here
+                
+                // Destroy the game object
+                Destroy(gameObject);
             }
-            
-            NotifyViews();
         }
         
         // Getters and setters
         
-        public Vector3 GetPosition() => position;
-        public Quaternion GetRotation() => rotation;
-        public Vector3 GetVelocity() => velocity;
+        public Vector2 GetPosition() => position;
+        public float GetRotation() => rotation;
+        public Vector2 GetVelocity() => velocity;
         public bool IsFiring() => isFiring;
         public ShipStats GetStats() => stats;
         
-        public void SetPosition(Vector3 newPosition)
+        public void SetPosition(Vector2 newPosition)
         {
             position = newPosition;
             OnPositionChanged?.Invoke(position);
             NotifyViews();
         }
         
-        public void SetRotation(Quaternion newRotation)
+        public void SetRotation(float newRotation)
         {
             rotation = newRotation;
             OnRotationChanged?.Invoke(rotation);
